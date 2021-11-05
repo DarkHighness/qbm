@@ -1,5 +1,5 @@
-use time::{format_description};
-use flexi_logger::{DeferredNow, Logger, Record, style};
+use flexi_logger::{style, DeferredNow, Logger, Record};
+use time::format_description;
 
 fn __logger_format(
     w: &mut dyn std::io::Write,
@@ -7,9 +7,7 @@ fn __logger_format(
     record: &Record,
 ) -> Result<(), std::io::Error> {
     let level = record.level();
-    let format = format_description::parse(
-        "[hour]:[minute]:[second]",
-    ).unwrap();
+    let format = format_description::parse("[hour]:[minute]:[second]").unwrap();
     let time = _now.format(&format);
 
     write!(

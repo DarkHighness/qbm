@@ -1,3 +1,4 @@
+use std::ops::Not;
 use std::process::Command;
 
 use cached::proc_macro::cached;
@@ -49,10 +50,7 @@ pub fn collect_system_compiler_entry() -> Vec<CompilerEntry> {
                 .args(["-Command", "&{ (gcm clang++).Source}"])
                 .output()
         } else {
-            Command::new("sh")
-                .arg("-c")
-                .arg("which clang++")
-                .output()
+            Command::new("sh").arg("-c").arg("which clang++").output()
         };
 
         if output.is_ok() {
@@ -74,10 +72,7 @@ pub fn collect_system_compiler_entry() -> Vec<CompilerEntry> {
                 .args(["-Command", "& {(gcm g++).Source}"])
                 .output()
         } else {
-            Command::new("sh")
-                .arg("-c")
-                .arg("which g++")
-                .output()
+            Command::new("sh").arg("-c").arg("which g++").output()
         };
 
         if output.is_ok() {
@@ -123,7 +118,7 @@ fn compiler_check_system_clang() -> Option<CompilerInfo> {
 
     let output = output.unwrap();
 
-    if output.status.code().unwrap_or(-1) != 0 {
+    if output.status.success().not() {
         return None;
     }
 
@@ -133,28 +128,22 @@ fn compiler_check_system_clang() -> Option<CompilerInfo> {
     let clang_target_regex = Regex::new(r"Target: (?P<target>[-\w]+)\n").unwrap();
     let clang_target = &clang_target_regex.captures(&clang_output).unwrap()["target"];
     let clang_thread_model_regex = Regex::new(r"Thread model: (?P<thread_model>\w+)\n").unwrap();
-    let clang_thread_model = &clang_thread_model_regex.captures(&clang_output).unwrap()["thread_model"];
+    let clang_thread_model =
+        &clang_thread_model_regex.captures(&clang_output).unwrap()["thread_model"];
 
-    Some(
-        CompilerInfo {
-            name: "clang++".to_string(),
-            version: clang_version.to_string(),
-            target: Some(clang_target.to_string()),
-            thread_model: Some(clang_thread_model.to_string()),
-        }
-    )
+    Some(CompilerInfo {
+        name: "clang++".to_string(),
+        version: clang_version.to_string(),
+        target: Some(clang_target.to_string()),
+        thread_model: Some(clang_thread_model.to_string()),
+    })
 }
 
 fn compiler_check_system_gcc() -> Option<CompilerInfo> {
     let output = if cfg!(target_os = "windows") {
-        Command::new("cmd")
-            .args(["/C", "g++ --version"])
-            .output()
+        Command::new("cmd").args(["/C", "g++ --version"]).output()
     } else {
-        Command::new("sh")
-            .arg("-c")
-            .arg("g++ --version")
-            .output()
+        Command::new("sh").arg("-c").arg("g++ --version").output()
     };
 
     if output.is_err() {
@@ -163,7 +152,7 @@ fn compiler_check_system_gcc() -> Option<CompilerInfo> {
 
     let output = output.unwrap();
 
-    if output.status.code().unwrap_or(-1) != 0 {
+    if output.status.success().not() {
         return None;
     }
 
@@ -172,12 +161,10 @@ fn compiler_check_system_gcc() -> Option<CompilerInfo> {
     let gcc_version = &gcc_regex.captures(&gcc_output).unwrap()["version"];
     let gcc_target = &gcc_regex.captures(&gcc_output).unwrap()["target"];
 
-    Some(
-        CompilerInfo {
-            name: "g++".to_string(),
-            version: gcc_version.to_string(),
-            target: Some(gcc_target.to_string()),
-            thread_model: None,
-        }
-    )
+    Some(CompilerInfo {
+        name: "g++".to_string(),
+        version: gcc_version.to_string(),
+        target: Some(gcc_target.to_string()),
+        thread_model: None,
+    })
 }
