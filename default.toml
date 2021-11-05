@@ -1,0 +1,7 @@
+[client]
+server='127.0.0.1:9000'
+secrets="AF12C6BFDA314B73A38CA6EFBB7165A5"
+
+[server]
+port="9000"
+secrets="AF12C6BFDA314B73A38CA6EFBB7165A5"
