@@ -5,6 +5,7 @@
       <sourceFolder url="file://$MODULE_DIR$/qbmc/src" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/qbms/src" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/util/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/qbmr/src" isTestSource="false" />
       <excludeFolder url="file://$MODULE_DIR$/target" />
     </content>
     <orderEntry type="inheritedJdk" />

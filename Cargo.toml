@@ -1,2 +1,2 @@
 [workspace]
-members = ["util", "qbmc", "qbms"]
+members = ["util", "qbmr" ,"qbmc", "qbms"]

@@ -82,7 +82,7 @@ fn run(task: Json<BenchmarkTask<'_>>) -> Json<BenchmarkInfo> {
         } else {
             Json(BenchmarkInfo {
                 task_uid: task.task_uid.to_string(),
-                message: compile_result.err().unwrap(),
+                message: compile_result.ok().unwrap(),
                 output: "".to_string(),
             })
         }

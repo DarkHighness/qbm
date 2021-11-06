@@ -958,6 +958,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "qbmr"
+version = "0.1.0"
+dependencies = [
+ "figment",
+ "path-absolutize",
+ "serde",
+ "toml",
+]
+
+[[package]]
 name = "qbms"
 version = "0.1.0"
 dependencies = [

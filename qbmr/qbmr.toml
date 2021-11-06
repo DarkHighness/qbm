@@ -1,0 +1,13 @@
+[[compilers]]
+name="clang++"
+path="C:/msys64/mingw64/bin/clang++.exe"
+version="13.0.0"
+command="${COMPILER} ${COMPILER_ARGS} ${SOURCE_FILES}  -o ${TARGET_FILE_NAME}"
+extensions=["c","cpp"]
+
+[[compilers]]
+name="g++"
+path="C:/msys64/mingw64/bin/g++.exe"
+version="11.2.0"
+command="${COMPILER} ${COMPILER_ARGS} ${SOURCE_FILES} -o ${TARGET_FILE_NAME}"
+extensions=["c","cpp"]

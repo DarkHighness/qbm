@@ -1,8 +1,8 @@
+use path_absolutize::*;
 use std::fs;
 use std::ops::Not;
 use std::path::Path;
 use std::process::Command;
-use path_absolutize::*;
 
 pub fn compile_file(
     compiler_path: &str,
@@ -18,20 +18,16 @@ pub fn compile_file(
     }
 
     let source_file_name = format!("{}.{}", file_name, file_ext);
-    let source_file_path = cache_dir
-        .to_path_buf()
-        .join(&source_file_name);
+    let source_file_path = cache_dir.to_path_buf().join(&source_file_name);
 
     fs::write(&source_file_path, source_code);
 
     let output = if cfg!(target_os = "windows") {
-        Command::new(compiler_path)
+        Command::new("powershell")
             .current_dir(cache_dir.absolutize().unwrap())
             .args([
-                compiler_args,
-                &source_file_name,
-                "-o",
-                &format!("{}.exe", source_file_name),
+                "-Command",
+                &format!("&{{{} {} -o {}}}", compiler_path, compiler_args, file_name),
             ])
             .output()
     } else {
