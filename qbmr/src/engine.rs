@@ -13,6 +13,16 @@ struct EngineCompiler {
     extensions: HashSet<String>,
 }
 
+pub type EngineErrorMessage = String;
+
+#[derive(Debug)]
+pub enum EngineResult {
+    EngineExecutionSetupError(EngineErrorMessage),
+    EngineCompileError(EngineErrorMessage),
+    EngineExecutionError(EngineErrorMessage),
+    EngineExecutionOk(String),
+}
+
 pub struct Engine {
     compilers: Vec<EngineCompiler>,
     source_directory: String,
@@ -24,17 +34,21 @@ impl Engine {
         compilers: &Vec<CompilerConfig>,
         source_directory: &str,
         build_directory: &str,
-    ) -> Self {
+    ) -> Result<Engine, EngineErrorMessage> {
         let source_directory_path = Path::new(source_directory);
 
         if !source_directory_path.exists() {
-            fs::create_dir_all(source_directory_path).expect("unable to crate source directory.")
+            if fs::create_dir_all(source_directory_path).is_err() {
+                return Err("unable to create source directory.".to_string());
+            }
         }
 
         let build_directory_path = Path::new(build_directory);
 
         if !build_directory_path.exists() {
-            fs::create_dir_all(build_directory_path).expect("unable to create build directory.")
+            if fs::create_dir_all(build_directory_path).is_err() {
+                return Err("unable to create build directory.".to_string());
+            }
         }
 
         let compilers = compilers
@@ -50,11 +64,11 @@ impl Engine {
             })
             .collect();
 
-        Engine {
+        Ok(Engine {
             compilers,
             source_directory: source_directory.to_string(),
             build_directory: build_directory.to_string(),
-        }
+        })
     }
 
     pub fn execute(
@@ -64,21 +78,37 @@ impl Engine {
         source_code: &str,
         execution_args: &str,
         file_name: &str,
-    ) -> Result<String, String> {
-        let (compiler, source_file_path, target_file_path) = self
-            .setup_execution_env(compiler, source_code, file_name)
-            .expect("unable to setup execution env");
+    ) -> EngineResult {
+        let env_setup_result = self.setup_execution_env(compiler, source_code, file_name);
 
-        let compiler_result = Self::do_compile(compiler_args, compiler, source_file_path, &target_file_path);
+        if env_setup_result.is_err() {
+            return EngineResult::EngineExecutionSetupError(
+                "unable to setup execution env".to_string(),
+            );
+        }
+
+        let (compiler, source_file_path, target_file_path) = env_setup_result.unwrap();
+
+        let compiler_result =
+            Self::do_compile(compiler_args, compiler, source_file_path, &target_file_path);
 
         return if compiler_result.is_ok() {
-            Self::execute_program(execution_args, target_file_path)
+            let execution_result = Self::execute_program(execution_args, target_file_path);
+
+            if execution_result.is_err() {
+                EngineResult::EngineExecutionError(execution_result.err().unwrap())
+            } else {
+                EngineResult::EngineExecutionOk(execution_result.unwrap())
+            }
         } else {
-            compiler_result
+            EngineResult::EngineCompileError(compiler_result.err().unwrap())
         };
     }
 
-    fn execute_program(execution_args: &str, target_file_path: String) -> Result<String, String> {
+    fn execute_program(
+        execution_args: &str,
+        target_file_path: String,
+    ) -> Result<String, EngineErrorMessage> {
         let execution_output = Command::new(
             Path::new(target_file_path.as_str())
                 .absolutize()
@@ -86,8 +116,8 @@ impl Engine {
                 .to_str()
                 .unwrap(),
         )
-            .arg(execution_args)
-            .output();
+        .arg(execution_args)
+        .output();
 
         if execution_output.is_err() {
             Err(execution_output.err().unwrap().to_string())
@@ -97,14 +127,26 @@ impl Engine {
             let execution_stdout = String::from_utf8(execution_output.stdout).unwrap();
 
             if !execution_output.status.success() {
-                Err(format!("execute program failed, code: {}\n{}", execution_output.status, execution_stderr))
-            } else {
+                Err(format!(
+                    "execute program failed, code: {}\n{}",
+                    execution_output.status, execution_stderr
+                ))
+            } else if execution_stdout.is_empty() && execution_stderr.is_empty() {
+                Ok("".to_string())
+            } else if execution_stderr.is_empty() {
                 Ok(execution_stdout)
+            } else {
+                Err(execution_stderr)
             }
         }
     }
 
-    fn do_compile(compiler_args: &str, compiler: &EngineCompiler, source_file_path: String, target_file_path: &String) -> Result<String, String> {
+    fn do_compile(
+        compiler_args: &str,
+        compiler: &EngineCompiler,
+        source_file_path: String,
+        target_file_path: &String,
+    ) -> Result<String, EngineErrorMessage> {
         let compiler_command = compiler
             .command
             .replace("${COMPILER}", compiler.path.as_str())
@@ -156,14 +198,13 @@ impl Engine {
             ));
         }
 
-        let compiler_result = if compiler_stdout.is_empty() && compiler_stderr.is_empty() {
+        if compiler_stdout.is_empty() && compiler_stderr.is_empty() {
             Ok("compile ok".to_string())
         } else if compiler_stderr.is_empty() {
             Ok(compiler_stdout)
         } else {
             Err(compiler_stderr)
-        };
-        compiler_result
+        }
     }
 
     fn setup_execution_env(
@@ -171,7 +212,7 @@ impl Engine {
         compiler: &str,
         source_code: &str,
         file_name: &str,
-    ) -> Result<(&EngineCompiler, String, String), String> {
+    ) -> Result<(&EngineCompiler, String, String), EngineErrorMessage> {
         let file_extension = Path::new(file_name)
             .extension()
             .expect("invalid file name")
